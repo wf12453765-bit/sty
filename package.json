@@ -1,22 +1,9 @@
 {
-  "name": "sty-browser",
-  "version": "0.1.0",
-  "description": "A Windows desktop browser built with Electron.",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron .",
-    "dev": "electron .",
-    "build": "electron-builder --win"
-  },
-  "devDependencies": {
-    "electron": "^38.2.0",
-    "electron-builder": "^26.0.12"
-  },
-  "build": {
-    "appId": "com.sty.browser",
-    "productName": "STY Browser",
-    "win": {
-      "target": "nsis"
-    }
-  }
+  "name":"sty-browser",
+  "version":"0.2.0",
+  "description":"STY Windows desktop browser",
+  "main":"main.js",
+  "scripts":{"start":"electron .","dev":"electron .","build":"electron-builder --win"},
+  "devDependencies":{"electron":"^38.2.0","electron-builder":"^26.0.12"},
+  "build":{"appId":"com.sty.browser","productName":"STY Browser","win":{"target":"nsis"}}
 }

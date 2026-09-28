@@ -1,16 +1,10 @@
-const { contextBridge, ipcRenderer } = require("electron");
-
-contextBridge.exposeInMainWorld("browserAPI", {
-  newTab: (url) => ipcRenderer.invoke("new-tab", url),
-  closeTab: (id) => ipcRenderer.invoke("close-tab", id),
-  activateTab: (id) => ipcRenderer.invoke("activate-tab", id),
-  navigate: (url) => ipcRenderer.invoke("navigate", url),
-  back: () => ipcRenderer.invoke("back"),
-  forward: () => ipcRenderer.invoke("forward"),
-  reload: () => ipcRenderer.invoke("reload"),
-  devtools: () => ipcRenderer.invoke("devtools"),
-  openDownloads: () => ipcRenderer.invoke("open-downloads"),
-  onTabsUpdated: (callback) => ipcRenderer.on("tabs-updated", (_e, data) => callback(data)),
-  onTabState: (callback) => ipcRenderer.on("tab-state", (_e, data) => callback(data)),
-  onDownloadFinished: (callback) => ipcRenderer.on("download-finished", (_e, data) => callback(data))
+const{contextBridge,ipcRenderer}=require("electron");
+contextBridge.exposeInMainWorld("browserAPI",{
+ newTab:u=>ipcRenderer.invoke("new-tab",u),activateTab:id=>ipcRenderer.invoke("activate-tab",id),closeTab:id=>ipcRenderer.invoke("close-tab",id),
+ navigate:u=>ipcRenderer.invoke("navigate",u),back:()=>ipcRenderer.invoke("back"),forward:()=>ipcRenderer.invoke("forward"),reload:()=>ipcRenderer.invoke("reload"),
+ devtools:()=>ipcRenderer.invoke("devtools"),downloads:()=>ipcRenderer.invoke("downloads"),
+ getBookmarks:()=>ipcRenderer.invoke("get-bookmarks"),addBookmark:b=>ipcRenderer.invoke("add-bookmark",b),removeBookmark:u=>ipcRenderer.invoke("remove-bookmark",u),
+ getHistory:()=>ipcRenderer.invoke("get-history"),clearHistory:()=>ipcRenderer.invoke("clear-history"),openUrl:u=>ipcRenderer.invoke("open-url",u),
+ onTabsUpdated:cb=>ipcRenderer.on("tabs-updated",(_e,d)=>cb(d)),onTabState:cb=>ipcRenderer.on("tab-state",(_e,d)=>cb(d)),
+ onInitialData:cb=>ipcRenderer.on("initial-data",(_e,d)=>cb(d)),onDownloadFinished:cb=>ipcRenderer.on("download-finished",(_e,d)=>cb(d))
 });

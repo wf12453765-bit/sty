@@ -1,39 +1,6 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>STY Browser</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="browser">
-    <div class="tabsbar">
-      <div id="tabs" class="tabs"></div>
-      <button id="newTab" class="icon-btn" title="新建标签页">＋</button>
-      <button id="menuBtn" class="icon-btn" title="更多">⋮</button>
-    </div>
-
-    <div class="toolbar">
-      <button id="back" class="nav-btn" title="后退">←</button>
-      <button id="forward" class="nav-btn" title="前进">→</button>
-      <button id="reload" class="nav-btn" title="刷新">↻</button>
-
-      <form id="addressForm" class="address-form">
-        <input id="address" autocomplete="off" placeholder="输入网址或搜索内容">
-      </form>
-
-      <button id="bookmark" class="nav-btn" title="收藏当前页面">☆</button>
-      <button id="downloads" class="nav-btn" title="打开下载文件夹">⇩</button>
-    </div>
-  </div>
-
-  <div id="menu" class="menu hidden">
-    <button id="devtools">开发者工具</button>
-    <button id="openDownloads">下载</button>
-  </div>
-
-  <script src="renderer.js"></script>
-</body>
-</html>
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self';style-src 'self' 'unsafe-inline';script-src 'self'"><title>STY Browser</title><link rel="stylesheet" href="styles.css"></head>
+<body><div class="browser"><div class="tabsbar"><div id="tabs" class="tabs"></div><button id="newTab">＋</button><button id="menuBtn">⋮</button></div>
+<div class="toolbar"><button id="back">←</button><button id="forward">→</button><button id="reload">↻</button><form id="addressForm"><input id="address" placeholder="输入网址或搜索内容"></form><button id="bookmark">☆</button><button id="downloads">⇩</button></div></div>
+<div id="panel" class="panel hidden"><div class="panel-head"><b id="panelTitle">收藏夹</b><button id="closePanel">×</button></div><div id="panelBody"></div></div>
+<div id="menu" class="menu hidden"><button id="bookmarksMenu">收藏夹</button><button id="historyMenu">历史记录</button><button id="devtools">开发者工具</button><button id="downloadsMenu">下载</button></div>
+<script src="renderer.js"></script></body></html>

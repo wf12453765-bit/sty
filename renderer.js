@@ -1,108 +1,11 @@
-const tabsEl = document.getElementById("tabs");
-const addressEl = document.getElementById("address");
-const addressForm = document.getElementById("addressForm");
-const menu = document.getElementById("menu");
-
-function renderTabs(tabs) {
-  tabsEl.innerHTML = "";
-
-  for (const tab of tabs) {
-    const el = document.createElement("div");
-    el.className = `tab ${tab.active ? "active" : ""}`;
-    el.dataset.id = tab.id;
-
-    const title = document.createElement("span");
-    title.className = "tab-title";
-    title.textContent = tab.title || "新标签页";
-
-    const close = document.createElement("span");
-    close.className = "close";
-    close.textContent = "×";
-    close.title = "关闭";
-
-    el.appendChild(title);
-    el.appendChild(close);
-
-    el.addEventListener("click", (event) => {
-      if (event.target === close) {
-        window.browserAPI.closeTab(tab.id);
-      } else {
-        window.browserAPI.activateTab(tab.id);
-      }
-    });
-
-    tabsEl.appendChild(el);
-  }
-}
-
-addressForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  window.browserAPI.navigate(addressEl.value);
-});
-
-document.getElementById("newTab").addEventListener("click", () => {
-  window.browserAPI.newTab();
-});
-
-document.getElementById("back").addEventListener("click", () => {
-  window.browserAPI.back();
-});
-
-document.getElementById("forward").addEventListener("click", () => {
-  window.browserAPI.forward();
-});
-
-document.getElementById("reload").addEventListener("click", () => {
-  window.browserAPI.reload();
-});
-
-document.getElementById("devtools").addEventListener("click", () => {
-  menu.classList.add("hidden");
-  window.browserAPI.devtools();
-});
-
-document.getElementById("downloads").addEventListener("click", () => {
-  window.browserAPI.openDownloads();
-});
-
-document.getElementById("openDownloads").addEventListener("click", () => {
-  menu.classList.add("hidden");
-  window.browserAPI.openDownloads();
-});
-
-document.getElementById("menuBtn").addEventListener("click", () => {
-  menu.classList.toggle("hidden");
-});
-
-window.browserAPI.onTabsUpdated(renderTabs);
-
-window.browserAPI.onTabState((state) => {
-  addressEl.value = state.url || "";
-  document.title = state.title ? `${state.title} - STY Browser` : "STY Browser";
-});
-
-window.browserAPI.onDownloadFinished((data) => {
-  console.log("下载完成:", data);
-});
-
-document.addEventListener("keydown", (event) => {
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "l") {
-    event.preventDefault();
-    addressEl.focus();
-    addressEl.select();
-  }
-
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "t") {
-    event.preventDefault();
-    window.browserAPI.newTab();
-  }
-
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "w") {
-    event.preventDefault();
-  }
-
-  if (event.key === "F12") {
-    event.preventDefault();
-    window.browserAPI.devtools();
-  }
-});
+const $=id=>document.getElementById(id);let bookmarks=[],history=[];
+function tabs(data){$("tabs").innerHTML="";data.forEach(t=>{const e=document.createElement("div");e.className="tab "+(t.active?"active":"");const s=document.createElement("span");s.className="tab-title";s.textContent=t.title||"新标签页";const c=document.createElement("span");c.className="close";c.textContent="×";e.append(s,c);e.onclick=x=>x.target===c?browserAPI.closeTab(t.id):browserAPI.activateTab(t.id);$("tabs").append(e);});}
+function showPanel(type){$("menu").classList.add("hidden");$("panel").classList.remove("hidden");$("panelTitle").textContent=type==="bookmarks"?"收藏夹":"历史记录";const body=$("panelBody");const data=type==="bookmarks"?bookmarks:history;body.innerHTML="";if(!data.length){body.innerHTML='<div class="empty">暂无记录</div>';return}data.forEach(x=>{const e=document.createElement("div");e.className="item";e.textContent=x.title||x.url;e.title=x.url;const sm=document.createElement("small");sm.textContent=x.url;e.append(sm);e.onclick=()=>{browserAPI.openUrl(x.url);$("panel").classList.add("hidden")};body.append(e);});}
+$("addressForm").onsubmit=e=>{e.preventDefault();browserAPI.navigate($("address").value)};
+$("newTab").onclick=()=>browserAPI.newTab();$("back").onclick=()=>browserAPI.back();$("forward").onclick=()=>browserAPI.forward();$("reload").onclick=()=>browserAPI.reload();$("downloads").onclick=()=>browserAPI.downloads();
+$("menuBtn").onclick=()=>$("menu").classList.toggle("hidden");$("bookmarksMenu").onclick=()=>showPanel("bookmarks");$("historyMenu").onclick=()=>showPanel("history");$("devtools").onclick=()=>{menu.classList.add("hidden");browserAPI.devtools()};$("downloadsMenu").onclick=()=>browserAPI.downloads();$("closePanel").onclick=()=>$("panel").classList.add("hidden");
+$("bookmark").onclick=async()=>{const url=$("address").value;if(!url)return;bookmarks=await browserAPI.addBookmark({url,title:document.title.replace(" - STY Browser","")||url});};
+browserAPI.onTabsUpdated(tabs);
+browserAPI.onTabState(s=>{$("address").value=s.url||"";document.title=(s.title||"STY Browser")+" - STY Browser";if(s.url&&/^https?:/.test(s.url)){const item={url:s.url,title:s.title||s.url,time:new Date().toISOString()};history=[item,...history.filter(x=>x.url!==s.url)].slice(0,500);/* renderer copy; persistence is added on next revision */}});
+browserAPI.onInitialData(d=>{bookmarks=d.bookmarks||[];history=d.history||[]});
+document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="l"){e.preventDefault();address.focus();address.select()}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="t"){e.preventDefault();browserAPI.newTab()}if(e.key==="F12"){e.preventDefault();browserAPI.devtools()}});

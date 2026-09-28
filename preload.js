@@ -1,10 +1,10 @@
 const{contextBridge,ipcRenderer}=require("electron");
-contextBridge.exposeInMainWorld("browserAPI",{
- newTab:u=>ipcRenderer.invoke("new-tab",u),activateTab:id=>ipcRenderer.invoke("activate-tab",id),closeTab:id=>ipcRenderer.invoke("close-tab",id),
+contextBridge.exposeInMainWorld("api",{
+ newTab:u=>ipcRenderer.invoke("new-tab",u),closeTab:id=>ipcRenderer.invoke("close-tab",id),switchTab:id=>ipcRenderer.invoke("switch-tab",id),
  navigate:u=>ipcRenderer.invoke("navigate",u),back:()=>ipcRenderer.invoke("back"),forward:()=>ipcRenderer.invoke("forward"),reload:()=>ipcRenderer.invoke("reload"),
- devtools:()=>ipcRenderer.invoke("devtools"),downloads:()=>ipcRenderer.invoke("downloads"),
- getBookmarks:()=>ipcRenderer.invoke("get-bookmarks"),addBookmark:b=>ipcRenderer.invoke("add-bookmark",b),removeBookmark:u=>ipcRenderer.invoke("remove-bookmark",u),
- getHistory:()=>ipcRenderer.invoke("get-history"),clearHistory:()=>ipcRenderer.invoke("clear-history"),openUrl:u=>ipcRenderer.invoke("open-url",u),
- onTabsUpdated:cb=>ipcRenderer.on("tabs-updated",(_e,d)=>cb(d)),onTabState:cb=>ipcRenderer.on("tab-state",(_e,d)=>cb(d)),
- onInitialData:cb=>ipcRenderer.on("initial-data",(_e,d)=>cb(d)),onDownloadFinished:cb=>ipcRenderer.on("download-finished",(_e,d)=>cb(d))
+ devtools:()=>ipcRenderer.invoke("devtools"),downloadsFolder:()=>ipcRenderer.invoke("downloads-folder"),openFile:p=>ipcRenderer.invoke("open-file",p),
+ getData:()=>ipcRenderer.invoke("get-data"),saveSettings:s=>ipcRenderer.invoke("save-settings",s),
+ addBookmark:b=>ipcRenderer.invoke("add-bookmark",b),removeBookmark:u=>ipcRenderer.invoke("remove-bookmark",u),
+ clearHistory:()=>ipcRenderer.invoke("clear-history"),clearDownloads:()=>ipcRenderer.invoke("clear-downloads"),
+ onTabs:cb=>ipcRenderer.on("tabs",(_e,d)=>cb(d)),onTab:cb=>ipcRenderer.on("tab",(_e,d)=>cb(d)),onData:cb=>ipcRenderer.on("data",(_e,d)=>cb(d))
 });

@@ -1,6 +1,6 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self';style-src 'self' 'unsafe-inline';script-src 'self'"><title>STY Browser</title><link rel="stylesheet" href="styles.css"></head>
-<body><div class="browser"><div class="tabsbar"><div id="tabs" class="tabs"></div><button id="newTab">＋</button><button id="menuBtn">⋮</button></div>
-<div class="toolbar"><button id="back">←</button><button id="forward">→</button><button id="reload">↻</button><form id="addressForm"><input id="address" placeholder="输入网址或搜索内容"></form><button id="bookmark">☆</button><button id="downloads">⇩</button></div></div>
-<div id="panel" class="panel hidden"><div class="panel-head"><b id="panelTitle">收藏夹</b><button id="closePanel">×</button></div><div id="panelBody"></div></div>
-<div id="menu" class="menu hidden"><button id="bookmarksMenu">收藏夹</button><button id="historyMenu">历史记录</button><button id="devtools">开发者工具</button><button id="downloadsMenu">下载</button></div>
+<body><header><div id="tabs"></div><button id="newTab" title="新标签页">＋</button><button id="menu" title="菜单">⋮</button></header>
+<nav><button id="back">←</button><button id="forward">→</button><button id="reload">↻</button><form id="form"><input id="address" placeholder="搜索或输入网址"></form><button id="star">☆</button><button id="home">⌂</button></nav>
+<aside id="side" class="hidden"><div class="sideHead"><b id="sideTitle">收藏夹</b><button id="sideClose">×</button></div><div id="sideBody"></div></aside>
+<div id="menuPanel" class="menuPanel hidden"><button data-panel="bookmarks">⭐ 收藏夹</button><button data-panel="history">🕘 历史记录</button><button data-panel="downloads">⬇ 下载</button><button id="settings">⚙ 设置</button><button id="devtools">🛠 开发者工具</button></div>
 <script src="renderer.js"></script></body></html>

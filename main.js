@@ -1,56 +1,94 @@
-const {app,BrowserWindow,WebContentsView,ipcMain,shell}=require("electron");
+const {app,BrowserWindow,WebContentsView,ipcMain,shell,session}=require("electron");
 const path=require("path"),fs=require("fs");
 
-let win,activeTabId=null,nextTabId=1;
+let win,activeTabId=0,nextId=1;
 const tabs=new Map();
-
-function dataFile(name){return path.join(app.getPath("userData"),name);}
-function readJSON(name,fallback=[]){try{return JSON.parse(fs.readFileSync(dataFile(name),"utf8"));}catch{return fallback;}}
-function writeJSON(name,data){fs.writeFileSync(dataFile(name),JSON.stringify(data,null,2),"utf8");}
+const storeFile=()=>path.join(app.getPath("userData"),"sty-data.json");
+const defaults={settings:{home:"sty://home",search:"https://www.google.com/search?q=%s",theme:"dark"},bookmarks:[],history:[],downloads:[]};
+function load(){try{return {...defaults,...JSON.parse(fs.readFileSync(storeFile(),"utf8"))};}catch{return JSON.parse(JSON.stringify(defaults));}}
+function save(d){fs.mkdirSync(path.dirname(storeFile()),{recursive:true});fs.writeFileSync(storeFile(),JSON.stringify(d,null,2));}
+let data=load();
 
 function createWindow(){
-  win=new BrowserWindow({width:1400,height:900,minWidth:900,minHeight:600,
-    webPreferences:{preload:path.join(__dirname,"preload.js"),contextIsolation:true,nodeIntegration:false}});
-  win.loadFile(path.join(__dirname,"src","index.html"));
-  win.on("resize",layout);
+ win=new BrowserWindow({width:1440,height:920,minWidth:960,minHeight:620,backgroundColor:"#0f172a",
+  webPreferences:{preload:path.join(__dirname,"preload.js"),contextIsolation:true,nodeIntegration:false,sandbox:false}});
+ win.loadFile(path.join(__dirname,"src","index.html"));
+ win.on("resize",layout);
 }
-function bounds(){const [w,h]=win.getContentSize();return{x:0,y:92,width:w,height:Math.max(0,h-92)};}
-function layout(){const t=tabs.get(activeTabId);if(t)t.view.setBounds(bounds());}
-function normalize(v){v=String(v||"").trim();if(!v)return"https://www.google.com";if(/^[a-z][a-z\d+.-]*:\/\//i.test(v))return v;if(/^[\w.-]+\.[a-z]{2,}/i.test(v))return"https://"+v;return"https://www.google.com/search?q="+encodeURIComponent(v);}
-function sendTabs(){win?.webContents.send("tabs-updated",[...tabs.values()].map(t=>({id:t.id,title:t.view.webContents.getTitle()||"新标签页",url:t.view.webContents.getURL(),active:t.id===activeTabId})));}
-function state(id){const t=tabs.get(id);if(t)win.webContents.send("tab-state",{id,title:t.view.webContents.getTitle()||"新标签页",url:t.view.webContents.getURL(),back:t.view.webContents.canGoBack(),forward:t.view.webContents.canGoForward()});}
-
-async function newTab(url="https://www.google.com"){
-  const id=nextTabId++,view=new WebContentsView({webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
-  tabs.set(id,{id,view});
-  view.webContents.setWindowOpenHandler(({url})=>{newTab(url);return{action:"deny"};});
-  const update=()=>{state(id);sendTabs();};
-  ["did-navigate","did-navigate-in-page","page-title-updated","did-stop-loading"].forEach(e=>view.webContents.on(e,update));
-  view.webContents.on("will-download",(_e,item)=>{const p=path.join(app.getPath("downloads"),item.getFilename());item.setSavePath(p);item.once("done",()=>win.webContents.send("download-finished",{filename:item.getFilename(),path:p}));});
-  await view.webContents.loadURL(normalize(url));
-  if(activeTabId){const old=tabs.get(activeTabId);if(old)win.contentView.removeChildView(old.view);}
-  activeTabId=id;win.contentView.addChildView(view);layout();sendTabs();state(id);
+function area(){const [w,h]=win.getContentSize();return{x:0,y:96,width:w,height:Math.max(0,h-96)}}
+function layout(){const t=tabs.get(activeTabId);if(t)t.view.setBounds(area())}
+function isHome(u){return u==="sty://home"}
+function target(input){
+ const v=String(input||"").trim();if(!v)return data.settings.home;
+ if(isHome(v))return v;
+ if(/^[a-z][a-z\d+.-]*:\/\//i.test(v))return v;
+ if(/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(v))return "https://"+v;
+ return data.settings.search.replace("%s",encodeURIComponent(v));
 }
-function activate(id){const t=tabs.get(id);if(!t)return;if(activeTabId){const old=tabs.get(activeTabId);if(old)win.contentView.removeChildView(old.view);}activeTabId=id;win.contentView.addChildView(t.view);layout();sendTabs();state(id);}
-function closeTab(id){const t=tabs.get(id);if(!t)return;win.contentView.removeChildView(t.view);t.view.webContents.close();tabs.delete(id);if(!tabs.size)return newTab();if(activeTabId===id)activate([...tabs.keys()][tabs.size-1]);else sendTabs();}
+async function loadTarget(t,input){
+ const u=target(input);
+ if(isHome(u)){await t.view.webContents.loadURL(`file://${path.join(__dirname,"src","home.html")}`);t.home=true;}
+ else {t.home=false;await t.view.webContents.loadURL(u);}
+ t.logicalUrl=u;notifyTab(t.id);return u;
+}
+function snapshotTabs(){return [...tabs.values()].map(t=>({id:t.id,title:t.view.webContents.getTitle()||"STY Browser",url:t.logicalUrl||t.view.webContents.getURL(),active:t.id===activeTabId,loading:t.view.webContents.isLoading()}))}
+function notify(){win?.webContents.send("tabs",snapshotTabs())}
+function notifyTab(id){
+ const t=tabs.get(id);if(!t)return;
+ win?.webContents.send("tab", {id,title:t.view.webContents.getTitle()||"STY Browser",url:t.logicalUrl||t.view.webContents.getURL(),back:t.view.webContents.canGoBack(),forward:t.view.webContents.canGoForward(),loading:t.view.webContents.isLoading()});
+ notify();
+}
+function addHistory(t){
+ const u=t.logicalUrl||t.view.webContents.getURL();if(!/^https?:/.test(u))return;
+ data.history=[{url:u,title:t.view.webContents.getTitle()||u,time:new Date().toISOString()},...data.history.filter(x=>x.url!==u)].slice(0,1000);save(data);
+ win?.webContents.send("data",data);
+}
+function switchTab(id){
+ const t=tabs.get(id);if(!t)return;
+ if(activeTabId&&tabs.has(activeTabId))win.contentView.removeChildView(tabs.get(activeTabId).view);
+ activeTabId=id;win.contentView.addChildView(t.view);layout();notifyTab(id);
+}
+async function newTab(input=data.settings.home){
+ const id=nextId++,view=new WebContentsView({webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
+ const t={id,view,logicalUrl:target(input),home:false};tabs.set(id,t);
+ view.webContents.setWindowOpenHandler(({url})=>{newTab(url);return{action:"deny"}});
+ ["did-navigate","did-navigate-in-page","page-title-updated","did-start-loading","did-stop-loading"].forEach(e=>view.webContents.on(e,()=>{if(e==="did-navigate")addHistory(t);notifyTab(id)}));
+ view.webContents.on("will-download",(_e,item)=>{
+   const filename=item.getFilename(),savePath=path.join(app.getPath("downloads"),filename);
+   item.setSavePath(savePath);
+   const rec={id:Date.now().toString(),filename,url:item.getURL(),path:savePath,time:new Date().toISOString(),state:"progressing",received:0,total:item.getTotalBytes()};
+   data.downloads=[rec,...data.downloads].slice(0,200);save(data);win.webContents.send("data",data);
+   item.on("updated",()=>{rec.received=item.getReceivedBytes();rec.total=item.getTotalBytes();save(data);win.webContents.send("data",data)});
+   item.once("done",(_e,state)=>{rec.state=state;save(data);win.webContents.send("data",data)});
+ });
+ if(activeTabId&&tabs.has(activeTabId))win.contentView.removeChildView(tabs.get(activeTabId).view);
+ activeTabId=id;win.contentView.addChildView(view);layout();await loadTarget(t,input);return id;
+}
+function closeTab(id){
+ const t=tabs.get(id);if(!t)return;
+ win.contentView.removeChildView(t.view);t.view.webContents.close();tabs.delete(id);
+ if(!tabs.size)newTab();else if(activeTabId===id)switchTab([...tabs.keys()][tabs.size-1]);else notify();
+}
 
 app.whenReady().then(async()=>{
-  createWindow(); await newTab();
-  ipcMain.handle("new-tab",(_e,u)=>newTab(u));
-  ipcMain.handle("activate-tab",(_e,id)=>activate(id));
-  ipcMain.handle("close-tab",(_e,id)=>closeTab(id));
-  ipcMain.handle("navigate",(_e,u)=>{const t=tabs.get(activeTabId);if(t)t.view.webContents.loadURL(normalize(u));});
-  ipcMain.handle("back",()=>{const t=tabs.get(activeTabId);if(t?.view.webContents.canGoBack())t.view.webContents.goBack();});
-  ipcMain.handle("forward",()=>{const t=tabs.get(activeTabId);if(t?.view.webContents.canGoForward())t.view.webContents.goForward();});
-  ipcMain.handle("reload",()=>tabs.get(activeTabId)?.view.webContents.reload());
-  ipcMain.handle("devtools",()=>tabs.get(activeTabId)?.view.webContents.openDevTools({mode:"detach"}));
-  ipcMain.handle("downloads",()=>shell.openPath(app.getPath("downloads")));
-  ipcMain.handle("get-bookmarks",()=>readJSON("bookmarks.json",[]));
-  ipcMain.handle("add-bookmark",(_e,b)=>{const a=readJSON("bookmarks.json",[]);if(!a.some(x=>x.url===b.url)){a.unshift({...b,createdAt:new Date().toISOString()});writeJSON("bookmarks.json",a);}return a;});
-  ipcMain.handle("remove-bookmark",(_e,url)=>{const a=readJSON("bookmarks.json",[]).filter(x=>x.url!==url);writeJSON("bookmarks.json",a);return a;});
-  ipcMain.handle("get-history",()=>readJSON("history.json",[]));
-  ipcMain.handle("clear-history",()=>{writeJSON("history.json",[]);return[];});
-  ipcMain.handle("open-url",(_e,u)=>newTab(u));
-  win.webContents.on("did-finish-load",()=>{win.webContents.send("initial-data",{bookmarks:readJSON("bookmarks.json",[]),history:readJSON("history.json",[])});});
+ createWindow();await newTab();
+ ipcMain.handle("new-tab",(_e,u)=>newTab(u));
+ ipcMain.handle("close-tab",(_e,id)=>closeTab(id));
+ ipcMain.handle("switch-tab",(_e,id)=>switchTab(id));
+ ipcMain.handle("navigate",(_e,u)=>loadTarget(tabs.get(activeTabId),u));
+ ipcMain.handle("back",()=>tabs.get(activeTabId)?.view.webContents.goBack());
+ ipcMain.handle("forward",()=>tabs.get(activeTabId)?.view.webContents.goForward());
+ ipcMain.handle("reload",()=>tabs.get(activeTabId)?.view.webContents.reload());
+ ipcMain.handle("devtools",()=>tabs.get(activeTabId)?.view.webContents.openDevTools({mode:"detach"}));
+ ipcMain.handle("downloads-folder",()=>shell.openPath(app.getPath("downloads")));
+ ipcMain.handle("open-file",(_e,p)=>shell.openPath(p));
+ ipcMain.handle("get-data",()=>data);
+ ipcMain.handle("save-settings",(_e,s)=>{data.settings={...data.settings,...s};save(data);return data});
+ ipcMain.handle("add-bookmark",(_e,b)=>{if(!data.bookmarks.some(x=>x.url===b.url))data.bookmarks.unshift({...b,time:new Date().toISOString()});save(data);return data});
+ ipcMain.handle("remove-bookmark",(_e,u)=>{data.bookmarks=data.bookmarks.filter(x=>x.url!==u);save(data);return data});
+ ipcMain.handle("clear-history",()=>{data.history=[];save(data);return data});
+ ipcMain.handle("clear-downloads",()=>{data.downloads=[];save(data);return data});
+ ipcMain.handle("home",()=>newTab(data.settings.home));
+ win.webContents.on("did-finish-load",()=>win.webContents.send("data",data));
 });
-app.on("window-all-closed",()=>{if(process.platform!=="darwin")app.quit();});
+app.on("window-all-closed",()=>{if(process.platform!=="darwin")app.quit()});
